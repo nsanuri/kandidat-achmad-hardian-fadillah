@@ -21,12 +21,12 @@ class AuthController extends Controller
         $this->otpService = $otpService;
     }
 
-   
+
     public function checkEmail(Request $req)
     {
-        $v = Validator::make($req->all(), ['email'=>'required|email']);
+        $v = Validator::make($req->all(), ['email' => 'required|email']);
         if ($v->fails()) {
-            return response()->json([ 'status' => false, 'message' => 'Invalid email', 'data'=>null ], 422);
+            return response()->json(['status' => false, 'message' => 'Invalid email', 'data' => null], 422);
         }
 
         $email = $req->email;
@@ -49,30 +49,46 @@ class AuthController extends Controller
 
     public function login(Request $req)
     {
-        $v = Validator::make($req->all(), ['email'=>'required|email']);
+        $v = Validator::make($req->all(), [
+            'email' => 'required|email',
+            'password' => 'required|string|min:6'
+        ]);
         if ($v->fails()) {
-            return response()->json([ 'status' => false, 'message' => 'Invalid email', 'data'=>null ], 422);
+            return response()->json([
+                'status' => false,
+                'message' => 'Invalid input',
+                'data' => null
+            ], 422);
         }
 
         $email = $req->email;
+        $password = $req->password;
+
         $customer = MCustomer::where('email', $email)->first();
 
         if (!$customer) {
             return response()->json([[
                 'status' => false,
-                'message' => 'Login is failed',
+                'message' => 'Email tidak terdaftar',
                 'data' => null
-            ]]);
+            ]], 404);
         }
 
+        if (!Hash::check($password, $customer->password)) {
+            return response()->json([[
+                'status' => false,
+                'message' => 'Password salah',
+                'data' => null
+            ]], 401);
+        }
 
         return response()->json([[
             'status' => true,
-            'message' => 'Login is successful',
+            'message' => 'Login berhasil',
             'data' => [
                 'email' => $customer->email,
-                'customer_id' => (string)$customer->customer_id,
-                'customer_name' => $customer->name ?? null
+                'customer_id' => (string) $customer->customer_id,
+                'customer_name' => $customer->name
             ]
         ]]);
     }
@@ -80,9 +96,9 @@ class AuthController extends Controller
 
     public function generateOtp(Request $req)
     {
-        $v = Validator::make($req->all(), ['email'=>'required|email']);
+        $v = Validator::make($req->all(), ['email' => 'required|email']);
         if ($v->fails()) {
-            return response()->json([ 'status' => false, 'message' => 'Invalid email', 'data'=>null ], 422);
+            return response()->json(['status' => false, 'message' => 'Invalid email', 'data' => null], 422);
         }
 
         $email = $req->email;
@@ -129,11 +145,11 @@ class AuthController extends Controller
     public function verifyOtp(Request $req)
     {
         $v = Validator::make($req->all(), [
-            'email'=>'required|email',
+            'email' => 'required|email',
             'otp' => 'required|string'
         ]);
         if ($v->fails()) {
-            return response()->json([ 'status' => 'failed', 'message' => 'Invalid input', 'data'=>new \stdClass() ], 422);
+            return response()->json(['status' => 'failed', 'message' => 'Invalid input', 'data' => new \stdClass()], 422);
         }
 
         $email = $req->email;
@@ -142,7 +158,7 @@ class AuthController extends Controller
         $record = OtpCode::where('email', $email)
             ->where('otp', $otp)
             ->where('used', false)
-            ->orderBy('created_at','desc')
+            ->orderBy('created_at', 'desc')
             ->first();
 
         if (!$record) {
@@ -177,17 +193,17 @@ class AuthController extends Controller
     public function registerCustomer(Request $req)
     {
         $v = Validator::make($req->all(), [
-            'email'=>'required|email',
-            'name'=>'required|string',
-            'password'=>'nullable|string|min:6'
+            'email' => 'required|email',
+            'name' => 'required|string',
+            'password' => 'nullable|string|min:6'
         ]);
         if ($v->fails()) {
-            return response()->json([ 'status' => false, 'message' => 'Invalid input', 'data'=>null ], 422);
+            return response()->json(['status' => false, 'message' => 'Invalid input', 'data' => null], 422);
         }
 
         $email = $req->email;
 
-        if (MCustomer::where('email',$email)->exists()) {
+        if (MCustomer::where('email', $email)->exists()) {
             return response()->json([[
                 'status' => false,
                 'message' => 'Customer failed to insert (already exists)',
